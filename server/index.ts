@@ -41,10 +41,27 @@ app.use((req, res, next) => {
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    let message = err.message || "Internal Server Error";
+    
+    // Handle Zod validation errors
+    if (err.name === 'ZodError') {
+      return res.status(400).json({ 
+        message: "Validation error", 
+        errors: err.errors 
+      });
+    }
+    
+    // Don't expose internal errors in production
+    if (status === 500 && process.env.NODE_ENV === 'production') {
+      message = "Internal Server Error";
+    }
 
     res.status(status).json({ message });
-    throw err;
+    
+    // Log error but don't throw in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(err);
+    }
   });
 
   // importantly only setup vite in development and after

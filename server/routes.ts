@@ -5,6 +5,22 @@ import { insertGameSchema, insertMoveSchema } from "@shared/schema";
 import { z } from "zod";
 import { analyzeFen, getBotMove } from "./stockfish";
 
+// Input validation schemas
+const analyzeSchema = z.object({
+  fen: z.string().min(1, "FEN is required"),
+  depth: z.number().min(1).max(30).optional().default(15)
+});
+
+const botMoveSchema = z.object({
+  fen: z.string().min(1, "FEN is required"),
+  level: z.number().min(1).max(20).optional().default(10)
+});
+
+// Error handler wrapper
+const asyncHandler = (fn: Function) => (req: any, res: any, next: any) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new chess game
   app.post("/api/games", async (req, res) => {
@@ -92,28 +108,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API для анализа позиции через Stockfish
-  app.post("/api/stockfish/analyze", async (req, res) => {
-    const { fen, depth } = req.body;
-    if (!fen) return res.status(400).json({ error: "FEN required" });
-    try {
-      const analysis = await analyzeFen(fen, depth || 15);
-      res.json(analysis);
-    } catch (e) {
-      res.status(500).json({ error: (e as Error).message });
-    }
-  });
+  app.post("/api/stockfish/analyze", asyncHandler(async (req, res) => {
+    const validatedData = analyzeSchema.parse(req.body);
+    const analysis = await analyzeFen(validatedData.fen, validatedData.depth);
+    res.json(analysis);
+  }));
 
   // API для получения хода бота
-  app.post("/api/stockfish/bot-move", async (req, res) => {
-    const { fen, level } = req.body;
-    if (!fen) return res.status(400).json({ error: "FEN required" });
-    try {
-      const bestMove = await getBotMove(fen, level || 10);
-      res.json({ bestMove });
-    } catch (e) {
-      res.status(500).json({ error: (e as Error).message });
-    }
-  });
+  app.post("/api/stockfish/bot-move", asyncHandler(async (req, res) => {
+    const validatedData = botMoveSchema.parse(req.body);
+    const bestMove = await getBotMove(validatedData.fen, validatedData.level);
+    res.json({ bestMove });
+  }));
 
   const httpServer = createServer(app);
   return httpServer;
