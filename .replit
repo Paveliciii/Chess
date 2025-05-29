@@ -1,0 +1,8 @@
+modules = ["cpp-clang14", "nodejs-20", "c-clang14", "bash", "dotnet-7.0", "dotnet-8.0", "bun-1.2", "bun-1.1", "clojure-1.12", "clojure-1.11", "dart-3.5", "dart-2.18", "deno-2", "elixir-1_17"]
+run = "npm run dev"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "npm run dev"]
