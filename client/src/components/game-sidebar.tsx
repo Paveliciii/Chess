@@ -21,7 +21,9 @@ interface GameSidebarProps {
 export function GameSidebar({ chess, moves = [], whiteTime = 600, blackTime = 585, analysis = {} }: GameSidebarProps) {
   const [timeLeft, setTimeLeft] = useState({ white: whiteTime, black: blackTime });
   // Создаем состояние для таймера, которое будет зависеть от состояния игры
-  const [isRunning, setIsRunning] = useState(!chess.gameOver());
+  // Проверяем состояние игры без использования gameOver()
+  const isGameOver = chess.isCheckmate() || chess.isDraw() || chess.isStalemate();
+  const [isRunning, setIsRunning] = useState(!isGameOver);
   
   const history = chess.history();
   const parsedMoves = parseMoveHistory(history);
@@ -51,8 +53,9 @@ export function GameSidebar({ chess, moves = [], whiteTime = 600, blackTime = 58
 
   // Обновляем состояние таймера при изменении состояния игры
   useEffect(() => {
-    // Проверяем, закончилась ли игра
-    setIsRunning(!chess.gameOver());
+    // Проверяем, закончилась ли игра без использования gameOver()
+    const currentGameOver = chess.isCheckmate() || chess.isDraw() || chess.isStalemate();
+    setIsRunning(!currentGameOver);
   }, [chess]); // Добавляем зависимость от состояния шахмат
 
   // Timer functionality
@@ -106,8 +109,9 @@ export function GameSidebar({ chess, moves = [], whiteTime = 600, blackTime = 58
   
   // Обновляем историю игр при изменении состояния игры
   useEffect(() => {
-    // Проверяем, закончилась ли игра (gameOver), чтобы обновить список игр
-    if (chess.gameOver()) {
+    // Проверяем, закончилась ли игра, чтобы обновить список игр
+    const gameIsOver = chess.isCheckmate() || chess.isDraw() || chess.isStalemate();
+    if (gameIsOver) {
       try {
         const savedGames = JSON.parse(localStorage.getItem('chessGameHistory') || '[]');
         if (Array.isArray(savedGames)) {

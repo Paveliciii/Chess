@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Chess, Square } from 'chess.js';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
+import { Chess } from 'chess.js';
+import { useMutation } from '@tanstack/react-query';
 
 export interface UseChessGameProps {
   gameId?: number;
@@ -9,7 +9,7 @@ export interface UseChessGameProps {
 
 export function useChessGame({ 
   gameId, 
-  gameMode = 'multiplayer',
+  gameMode = 'multiplayer'
 }: UseChessGameProps = {}) {
   const [chess] = useState(() => new Chess());
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export function useChessGame({
   const [analysis, setAnalysis] = useState<{score?: number; depth?: number; mate?: number}>({});
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Debounced analysis to prevent too frequent calls
+  // Анализ позиции
   const runAnalysis = useCallback(async () => {
     if (gameMode === 'analysis') {
       try {
@@ -46,14 +46,17 @@ export function useChessGame({
   const updateGameMutation = useMutation({
     mutationFn: async (updates: any) => {
       if (!gameId) return;
+
       const response = await fetch(`/api/games/${gameId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
       });
+
       if (!response.ok) {
         throw new Error('Failed to update game');
       }
+
       return response.json();
     },
     onError: (error) => {
@@ -64,10 +67,12 @@ export function useChessGame({
   const makeMove = useCallback((from: string, to: string, promotion?: string) => {
     try {
       const move = chess.move({ from, to, promotion });
+
       if (move) {
         setLastMove({ from, to });
         setSelectedSquare(null);
         setValidMoves([]);
+
         // Save to server if game exists
         if (gameId) {
           updateGameMutation.mutate({
@@ -78,17 +83,18 @@ export function useChessGame({
             currentPlayer: chess.turn() === 'w' ? 'white' : 'black'
           });
         }
-        // Анализ только в режиме analysis
-        if (gameMode === 'analysis') {
-          setTimeout(runAnalysis, 100);
-        }
+
+        // Run analysis after move
+        setTimeout(runAnalysis, 100);
+
         return true;
       }
     } catch (error) {
       console.error('Invalid move:', error);
     }
+
     return false;
-  }, [chess, gameId, updateGameMutation, runAnalysis, gameMode]);
+  }, [chess, gameId, updateGameMutation, runAnalysis]);
 
   const selectSquare = useCallback((square: string) => {
     // If clicking on selected square, deselect
@@ -97,16 +103,15 @@ export function useChessGame({
       setValidMoves([]);
       return;
     }
+
     // If a square is selected and clicking on valid move, make the move
     if (selectedSquare && validMoves.includes(square)) {
       const success = makeMove(selectedSquare, square);
       if (success) return;
     }
-    // Проверяем, что square — корректная клетка (например, 'a1'-'h8')
-    const isValidSquare = /^[a-h][1-8]$/.test(square);
-    const moves = isValidSquare
-      ? (chess.moves({ square: square as Square, verbose: true }) as Array<{ to: string }>)
-      : (chess.moves({ verbose: true }) as Array<{ to: string }>);
+
+    // Select new square and show valid moves
+    const moves = chess.moves({ square, verbose: true });
     if (moves.length > 0) {
       setSelectedSquare(square);
       setValidMoves(moves.map(move => move.to));
@@ -122,6 +127,7 @@ export function useChessGame({
     setValidMoves([]);
     setLastMove(null);
     setAnalysis({});
+
     // Update server
     if (gameId) {
       updateGameMutation.mutate({
@@ -129,11 +135,13 @@ export function useChessGame({
         currentPlayer: 'white'
       });
     }
+
     runAnalysis();
   }, [chess, gameId, updateGameMutation, runAnalysis]);
 
   const resign = useCallback(() => {
     const winner = chess.turn() === 'w' ? 'black' : 'white';
+
     // Save to local history
     const gameHistory = JSON.parse(localStorage.getItem('chessGameHistory') || '[]');
     gameHistory.unshift({
@@ -144,6 +152,7 @@ export function useChessGame({
       moves: chess.history().length
     });
     localStorage.setItem('chessGameHistory', JSON.stringify(gameHistory.slice(0, 50)));
+
     // Update server
     if (gameId) {
       updateGameMutation.mutate({
@@ -151,7 +160,7 @@ export function useChessGame({
         winner
       });
     }
-  }, [chess, gameMode, gameId, updateGameMutation]);
+  }, [chess, gameId, updateGameMutation]);
 
   const offerDraw = useCallback(() => {
     // Implementation for draw offers

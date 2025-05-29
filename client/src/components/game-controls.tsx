@@ -1,17 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Handshake, Flag, Users, Bot, BarChart3 } from 'lucide-react';
-import { ColorSelector } from './color-selector';
+import { Play, Handshake, Flag, Users, BarChart3 } from 'lucide-react';
 
 interface GameControlsProps {
   onNewGame: () => void;
   onOfferDraw: () => void;
   onResign: () => void;
-  gameMode?: 'multiplayer' | 'bot' | 'analysis';
-  onGameModeChange?: (mode: 'multiplayer' | 'bot' | 'analysis') => void;
-  playerColor?: 'white' | 'black' | 'random';
-  onPlayerColorChange?: (color: 'white' | 'black' | 'random') => void;
+  gameMode?: 'multiplayer' | 'analysis';
+  onGameModeChange?: (mode: 'multiplayer' | 'analysis') => void;
 }
 
 export function GameControls({ 
@@ -19,9 +16,7 @@ export function GameControls({
   onOfferDraw, 
   onResign,
   gameMode = 'multiplayer',
-  onGameModeChange,
-  playerColor = 'white',
-  onPlayerColorChange
+  onGameModeChange
 }: GameControlsProps) {
   return (
     <div className="space-y-4">
@@ -39,18 +34,7 @@ export function GameControls({
             <Users className="mr-2 h-4 w-4" />
             Play with Friend
           </Button>
-          <Button
-            variant={gameMode === 'bot' ? 'default' : 'outline'}
-            className="w-full justify-start"
-            onClick={() => {
-              console.log('Switching to bot mode');
-              onGameModeChange?.('bot');
-              console.log('Mode changed to bot, current mode:', gameMode);
-            }}
-          >
-            <Bot className="mr-2 h-4 w-4" />
-            Practice with Bot
-          </Button>
+
           <Button
             variant={gameMode === 'analysis' ? 'default' : 'outline'}
             className="w-full justify-start"
@@ -85,24 +69,12 @@ export function GameControls({
               ♚
             </div>
             <div>
-              <div className="font-medium">
-                {gameMode === 'bot' ? 'Bot (1600)' : 'Friend'}
-              </div>
-              <div className="text-sm text-gray-300">
-                Rating: {gameMode === 'bot' ? '1600' : '1580'}
-              </div>
+              <div className="font-medium">Friend</div>
+              <div className="text-sm text-gray-300">Rating: 1580</div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Селектор цвета фигур - показывается только в режиме игры с ботом */}
-      {gameMode === 'bot' && onPlayerColorChange && (
-        <ColorSelector 
-          selectedColor={playerColor as 'white' | 'black' | 'random'} 
-          onColorChange={onPlayerColorChange} 
-        />
-      )}
 
       {/* Game Controls */}
       <Card>

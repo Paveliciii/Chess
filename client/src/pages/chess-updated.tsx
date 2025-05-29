@@ -98,6 +98,7 @@ export default function ChessPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
           {/* Game Controls - Desktop */}
           <div className="hidden lg:block lg:col-span-1">
             <GameControls
@@ -172,7 +173,10 @@ export default function ChessPage() {
                 onOfferDraw={handleOfferDraw}
                 onResign={handleResign}
                 gameMode={gameMode}
-                onGameModeChange={setGameMode}
+                onGameModeChange={(mode) => {
+                  console.log('Mobile menu changing game mode to:', mode);
+                  setGameMode(mode);
+                }}
               />
               <GameSidebar chess={chess} analysis={analysis} />
             </div>
