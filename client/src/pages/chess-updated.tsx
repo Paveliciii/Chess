@@ -1,5 +1,6 @@
 import { useState, Suspense } from 'react';
 import { ChessBoard } from '@/components/chess-board';
+import { useTelegram } from '@/hooks/useTelegram';
 import { GameControls } from '@/components/game-controls';
 import { GameSidebar } from '@/components/game-sidebar';
 import { GameHistoryViewer } from '@/components/game-history-viewer';
@@ -22,6 +23,7 @@ function LoadingSpinner() {
 }
 
 export default function ChessPage() {
+  const { user: tgUser } = useTelegram();
   const [gameMode, setGameMode] = useState<'multiplayer' | 'analysis'>('multiplayer');
   const [showHistory, setShowHistory] = useState(false);
   const {
@@ -70,6 +72,12 @@ export default function ChessPage() {
               </div>
               <h1 className="text-xl font-semibold text-gray-900">Chess Master</h1>
               <span className="text-sm text-gray-500">Telegram Chess</span>
+              {tgUser && (
+                <span className="ml-4 flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  <img src={tgUser.photo_url} alt="avatar" className="w-5 h-5 rounded-full" />
+                  {tgUser.first_name} {tgUser.last_name || ''} (@{tgUser.username})
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-4">
               <Button variant="ghost" size="icon" className="hidden sm:flex">
