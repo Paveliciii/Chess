@@ -4,6 +4,12 @@ import { storage } from "./storage";
 import { insertGameSchema, insertMoveSchema } from "@shared/schema";
 import { z } from "zod";
 import { analyzeFen, getBotMove } from "./stockfish";
+import { 
+  createRateLimitMiddleware, 
+  generalLimiter, 
+  stockfishLimiter, 
+  gameLimiter 
+} from "./rate-limiter";
 
 // Input validation schemas
 const analyzeSchema = z.object({
@@ -23,7 +29,7 @@ const asyncHandler = (fn: Function) => (req: any, res: any, next: any) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new chess game
-  app.post("/api/games", async (req, res) => {
+  app.post("/api/games", createRateLimitMiddleware(gameLimiter), async (req, res) => {
     try {
       const gameData = insertGameSchema.parse(req.body);
       const game = await storage.createGame(gameData);
@@ -108,14 +114,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API для анализа позиции через Stockfish
-  app.post("/api/stockfish/analyze", asyncHandler(async (req, res) => {
+  app.post("/api/stockfish/analyze", createRateLimitMiddleware(stockfishLimiter), asyncHandler(async (req, res) => {
     const validatedData = analyzeSchema.parse(req.body);
     const analysis = await analyzeFen(validatedData.fen, validatedData.depth);
     res.json(analysis);
   }));
 
   // API для получения хода бота
-  app.post("/api/stockfish/bot-move", asyncHandler(async (req, res) => {
+  app.post("/api/stockfish/bot-move", createRateLimitMiddleware(stockfishLimiter), asyncHandler(async (req, res) => {
     const validatedData = botMoveSchema.parse(req.body);
     const bestMove = await getBotMove(validatedData.fen, validatedData.level);
     res.json({ bestMove });

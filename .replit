@@ -1,4 +1,4 @@
-modules = ["cpp-clang14", "nodejs-20", "c-clang14", "bash", "dotnet-7.0", "dotnet-8.0", "bun-1.2", "bun-1.1", "clojure-1.12", "clojure-1.11", "dart-3.5", "dart-2.18", "deno-2", "elixir-1_17"]
+modules = ["bash", "bun-1.1", "bun-1.2", "c-clang14", "clojure-1.11", "clojure-1.12", "cpp-clang14", "dart-2.18", "dart-3.5", "deno-2", "dotnet-7.0", "dotnet-8.0", "elixir-1_17", "nodejs-20"]
 run = "npm run dev"
 
 [nix]

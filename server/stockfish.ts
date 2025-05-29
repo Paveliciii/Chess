@@ -1,6 +1,12 @@
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
+import { 
+  analysisCache, 
+  botMoveCache, 
+  generateAnalysisCacheKey, 
+  generateBotMoveCacheKey 
+} from './cache';
 
 // ES modules equivalent for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -30,7 +36,7 @@ export class StockfishEngine {
   private static instance: StockfishEngine | null = null;
   private isReady = false;
   private engineBusy = false;
-  
+
   // Приватный конструктор для синглтона
   private constructor() {
     // Инициализация происходит при вызове start()
@@ -43,17 +49,17 @@ export class StockfishEngine {
     }
     return StockfishEngine.instance;
   }
-  
+
   // Проверить, занят ли движок
   isBusy(): boolean {
     return this.engineBusy;
   }
-  
+
   // Задать состояние занятости
   setBusy(busy: boolean): void {
     this.engineBusy = busy;
   }
-  
+
   // Очистить список слушателей
   clearListeners() {
     this.listeners = [];
@@ -79,22 +85,22 @@ export class StockfishEngine {
             }
           });
       });
-      
+
       this.process.stderr.on('data', (data) => {
         console.error(`Stockfish stderr: ${data}`);
       });
-      
+
       this.process.on('error', (err) => {
         console.error(`Failed to start Stockfish: ${err.message}`);
         this.process = null;
       });
-      
+
       this.process.on('close', (code) => {
         console.log(`Stockfish process exited with code ${code}`);
         this.process = null;
         this.isReady = false;
       });
-      
+
       // Инициализируем UCI режим
       this.send("uci");
     } catch (err) {
@@ -104,7 +110,7 @@ export class StockfishEngine {
       throw err;
     }
   }
-  
+
   // Проверить, готов ли движок
   ensureReady(): Promise<void> {
     return new Promise((resolve) => {
@@ -112,7 +118,7 @@ export class StockfishEngine {
         resolve();
         return;
       }
-      
+
       const readyListener = (line: string) => {
         if (line === "readyok") {
           this.isReady = true;
@@ -120,7 +126,7 @@ export class StockfishEngine {
           resolve();
         }
       };
-      
+
       this.listeners.push(readyListener);
       this.send("isready");
     });
@@ -130,7 +136,7 @@ export class StockfishEngine {
     if (!this.process) {
       this.start();
     }
-    
+
     if (this.process) {
       this.process.stdin.write(cmd + "\n");
     } else {
@@ -141,7 +147,7 @@ export class StockfishEngine {
   onOutput(cb: (line: string) => void) {
     this.listeners.push(cb);
   }
-  
+
   // Вместо остановки процесса, просто отправляем команду stop
   stopSearch() {
     if (this.process) {
@@ -160,11 +166,22 @@ export class StockfishEngine {
 }
 
 // Advanced analysis function with more detailed information
-export async function analyzeFen(fen: string, depth = 15): Promise<AnalysisResult> {
+export async function analyzeFen(fen: string, depth: number = 15): Promise<AnalysisResult> {
+  // Check cache first
+  const cacheKey = generateAnalysisCacheKey(fen, depth);
+  const cachedResult = analysisCache.get(cacheKey);
+
+  if (cachedResult) {
+    console.log(`Cache hit for analysis: ${cacheKey}`);
+    return cachedResult;
+  }
+
+  console.log(`Cache miss for analysis: ${cacheKey}`);
+
   return new Promise(async (resolve, reject) => {
     // Используем синглтон экземпляр движка
     const engine = StockfishEngine.getInstance();
-    
+
     // Проверяем, занят ли движок
     if (engine.isBusy()) {
       try {
@@ -176,22 +193,22 @@ export async function analyzeFen(fen: string, depth = 15): Promise<AnalysisResul
         console.error('Error stopping previous search:', err);
       }
     }
-    
+
     // Отмечаем, что движок теперь занят
     engine.setBusy(true);
-    
+
     // Очищаем предыдущих слушателей
     engine.clearListeners();
-    
+
     // Запускаем движок, если он еще не запущен
     engine.start();
-    
+
     let bestMove = "";
     let score: number | undefined;
     let mateIn: number | undefined;
     let currentDepth = 0;
     let principalVariation: string[] = [];
-    
+
     engine.onOutput((line: string) => {
       // Parse score and depth information from the info lines
       if (line.startsWith("info")) {
@@ -200,7 +217,7 @@ export async function analyzeFen(fen: string, depth = 15): Promise<AnalysisResul
         if (depthMatch) {
           currentDepth = parseInt(depthMatch[1]);
         }
-        
+
         // Extract score
         const scoreMatch = line.match(/\bscore (cp|mate) ([-\d]+)/);
         if (scoreMatch) {
@@ -212,36 +229,41 @@ export async function analyzeFen(fen: string, depth = 15): Promise<AnalysisResul
             mateIn = parseInt(scoreMatch[2]);
           }
         }
-        
+
         // Extract principal variation (sequence of best moves)
         const pvMatch = line.match(/\bpv (.+)$/);
         if (pvMatch && pvMatch[1]) {
           principalVariation = pvMatch[1].split(' ');
         }
       }
-      
+
       // When analysis is complete, resolve with the results
       if (line.startsWith("bestmove")) {
         bestMove = line.split(" ")[1];
         engine.setBusy(false); // Освобождаем движок
-        
-        resolve({
+
+        const result = {
           bestMove,
           score,
           depth: currentDepth,
           pv: principalVariation.length > 0 ? principalVariation : undefined,
           mate: mateIn
-        });
+        };
+
+        // Cache the result (longer TTL for analysis)
+        analysisCache.set(cacheKey, result, 10 * 60 * 1000); // 10 minutes
+
+        resolve(result);
       }
     });
-    
+
     // Убеждаемся, что движок готов
     await engine.ensureReady();
-    
+
     // Задаем позицию и запускаем анализ
     engine.send(`position fen ${fen}`);
     engine.send(`go depth ${depth}`);
-    
+
     // Таймаут на случай сбоя
     const timeout = setTimeout(() => {
       if (!bestMove) {
@@ -255,10 +277,21 @@ export async function analyzeFen(fen: string, depth = 15): Promise<AnalysisResul
 
 // Function for bot play with adjustable skill level
 export async function getBotMove(fen: string, skillLevel = 10): Promise<string> {
+  // Check cache first
+  const cacheKey = generateBotMoveCacheKey(fen, skillLevel);
+  const cachedResult = botMoveCache.get(cacheKey);
+
+  if (cachedResult) {
+    console.log(`Cache hit for bot move: ${cacheKey}`);
+    return cachedResult;
+  }
+
+  console.log(`Cache miss for bot move: ${cacheKey}`);
+
   return new Promise(async (resolve, reject) => {
     // Используем синглтон экземпляр движка
     const engine = StockfishEngine.getInstance();
-    
+
     // Проверяем, занят ли движок
     if (engine.isBusy()) {
       try {
@@ -270,46 +303,54 @@ export async function getBotMove(fen: string, skillLevel = 10): Promise<string> 
         console.error('Error stopping previous search:', err);
       }
     }
-    
+
     // Отмечаем, что движок теперь занят
     engine.setBusy(true);
-    
+
     // Очищаем предыдущих слушателей
     engine.clearListeners();
-    
+
     // Запускаем движок, если он еще не запущен
     engine.start();
-    
+
     let bestMove = "";
-    
+
     engine.onOutput((line: string) => {
       // When move is found, return it
       if (line.startsWith("bestmove")) {
-        bestMove = line.split(" ")[1];
+        const bestmoveMatch = line.match(/bestmove\s(\S+)/);
+        
+        if (bestmoveMatch) {
+          const bestMove = bestmoveMatch[1];
+
+          // Cache the result (shorter TTL for bot moves)
+          botMoveCache.set(cacheKey, bestMove, 3 * 60 * 1000); // 3 minutes
+
+          resolve(bestMove);
+        }
         engine.setBusy(false); // Освобождаем движок
-        resolve(bestMove);
       }
     });
-    
+
     // Убеждаемся, что движок готов
     await engine.ensureReady();
-    
+
     // Задаем настройки уровня сложности
     engine.send(`setoption name Skill Level value ${Math.min(Math.max(0, skillLevel), 20)}`);
-    
+
     // Ограничиваем движок, чтобы он играл более по-человечески на низких уровнях
     if (skillLevel < 10) {
       engine.send(`setoption name Contempt value ${skillLevel * 10 - 50}`);
       engine.send(`setoption name Slow Mover value ${100 - skillLevel * 5}`);
     }
-    
+
     // Задаем позицию и запускаем поиск
     engine.send(`position fen ${fen}`);
-    
+
     // Используем более низкую глубину для слабых уровней
     const searchDepth = Math.max(1, Math.min(skillLevel, 15));
     engine.send(`go depth ${searchDepth}`);
-    
+
     // Таймаут на случай сбоя
     const timeout = setTimeout(() => {
       if (!bestMove) {

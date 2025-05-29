@@ -1,10 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { logger, requestLogger } from "./logger";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add request logging
+app.use(requestLogger);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -39,12 +43,25 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     let message = err.message || "Internal Server Error";
     
+    // Log the error with context
+    logger.error('Application Error', {
+      error: err,
+      request: {
+        method: req.method,
+        url: req.url,
+        headers: req.headers,
+        body: req.body
+      },
+      status
+    });
+    
     // Handle Zod validation errors
     if (err.name === 'ZodError') {
+      logger.warn('Validation Error', { errors: err.errors, url: req.url });
       return res.status(400).json({ 
         message: "Validation error", 
         errors: err.errors 
@@ -57,11 +74,6 @@ app.use((req, res, next) => {
     }
 
     res.status(status).json({ message });
-    
-    // Log error but don't throw in production
-    if (process.env.NODE_ENV !== 'production') {
-      console.error(err);
-    }
   });
 
   // importantly only setup vite in development and after

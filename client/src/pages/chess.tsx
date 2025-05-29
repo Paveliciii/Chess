@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { ChessBoard } from '@/components/chess-board';
 import { GameControls } from '@/components/game-controls';
 import { GameSidebar } from '@/components/game-sidebar';
@@ -16,6 +16,10 @@ import {
   DialogContent,
   DialogTrigger,
 } from '@/components/ui/dialog';
+
+function LoadingSpinner() {
+  return <div>Loading...</div>;
+}
 
 export default function ChessPage() {
   const [gameMode, setGameMode] = useState<'multiplayer' | 'bot' | 'analysis'>('multiplayer');
@@ -82,7 +86,9 @@ export default function ChessPage() {
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                  <GameHistoryViewer onClose={() => setShowHistory(false)} />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <GameHistoryViewer onClose={() => setShowHistory(false)} />
+                  </Suspense>
                 </DialogContent>
               </Dialog>
               <Button variant="ghost" size="icon" className="hidden sm:flex">
@@ -96,7 +102,7 @@ export default function ChessPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
+
           {/* Game Controls - Desktop */}
           <div className="hidden lg:block lg:col-span-1">
             <GameControls
@@ -120,7 +126,7 @@ export default function ChessPage() {
               onSquareClick={selectSquare}
               playerColor={actualPlayerColor} // Передаем цвет игрока для ориентации доски
             />
-            
+
             {/* Mobile Controls */}
             <div className="mt-4 lg:hidden">
               <div className="flex gap-2">

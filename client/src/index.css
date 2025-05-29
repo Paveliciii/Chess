@@ -23,7 +23,7 @@
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 20 14.3% 4.1%;
   --radius: 0.5rem;
-  
+
   /* Chess-specific colors */
   --board-light: 42 23% 80%; /* #F0D9B5 */
   --board-dark: 28 28% 54%; /* #B58863 */
@@ -68,43 +68,51 @@
   .board-light {
     background-color: hsl(var(--board-light));
   }
-  
+
   .board-dark {
     background-color: hsl(var(--board-dark));
   }
-  
+
   .chess-square {
     @apply w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-2xl sm:text-3xl md:text-4xl cursor-pointer transition-all duration-200 relative;
   }
-  
+
   .chess-square:hover {
     @apply brightness-110;
   }
-  
+
   .chess-piece {
     @apply select-none transition-all duration-300 cursor-grab;
   }
-  
+
   .chess-piece:active {
     @apply cursor-grabbing scale-110;
   }
-  
+
   .square-selected {
     @apply ring-2 ring-primary ring-offset-2;
   }
-  
+
   .square-valid-move {
     @apply after:content-[''] after:absolute after:inset-0 after:bg-green-500 after:bg-opacity-30 after:rounded-full after:scale-50;
   }
-  
+
   .square-in-check {
     @apply bg-red-500 bg-opacity-30;
   }
-  
+
   .square-last-move {
     background-color: hsl(var(--highlight)) !important;
     opacity: 0.6;
   }
+
+    .square-in-check {
+        @apply bg-red-200 border-red-400;
+    }
+
+    .square-focused {
+        @apply ring-2 ring-blue-500 ring-offset-2;
+    }
 }
 
 @media (max-width: 640px) {
