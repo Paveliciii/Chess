@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 11% 98%; /* #F5F7FA */
+  --foreground: 20 14.3% 4.1%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 207 90% 54%; /* #2196F3 - Telegram blue */
+  --primary-foreground: 211 100% 99%;
+  --secondary: 60 4.8% 95.9%;
+  --secondary-foreground: 24 9.8% 10%;
+  --accent: 60 4.8% 95.9%;
+  --accent-foreground: 24 9.8% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 20 14.3% 4.1%;
+  --radius: 0.5rem;
+  
+  /* Chess-specific colors */
+  --board-light: 42 23% 80%; /* #F0D9B5 */
+  --board-dark: 28 28% 54%; /* #B58863 */
+  --highlight: 54 100% 62%; /* #FFE135 */
+  --check: 0 100% 70%; /* #FF6B6B */
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 207 90% 54%;
+  --primary-foreground: 211 100% 99%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 240 4.9% 83.9%;
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .board-light {
+    background-color: hsl(var(--board-light));
+  }
+  
+  .board-dark {
+    background-color: hsl(var(--board-dark));
+  }
+  
+  .chess-square {
+    @apply w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-2xl sm:text-3xl md:text-4xl cursor-pointer transition-all duration-200 relative;
+  }
+  
+  .chess-square:hover {
+    @apply brightness-110;
+  }
+  
+  .chess-piece {
+    @apply select-none transition-all duration-300 cursor-grab;
+  }
+  
+  .chess-piece:active {
+    @apply cursor-grabbing scale-110;
+  }
+  
+  .square-selected {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
+  
+  .square-valid-move {
+    @apply after:content-[''] after:absolute after:inset-0 after:bg-green-500 after:bg-opacity-30 after:rounded-full after:scale-50;
+  }
+  
+  .square-in-check {
+    @apply bg-red-500 bg-opacity-30;
+  }
+  
+  .square-last-move {
+    background-color: hsl(var(--highlight)) !important;
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 640px) {
+  .chess-square {
+    @apply w-10 h-10 text-xl;
+  }
+}
